@@ -143,7 +143,7 @@ async function pushRound(matchId: string, rIdx: number, round: RoundState, _matc
 
   // Resolve player UUIDs from store ids — we use the store id as the DB uuid directly.
   const { error: rErr } = await supabase.from('rounds').upsert(
-    { id: round.id, match_id: matchId, idx: rIdx, first_dealer: round.firstDealer, status: round.status },
+    { id: round.id, match_id: matchId, idx: rIdx, first_dealer: round.firstDealer ?? 'blue', status: round.status },
     { onConflict: 'id' },
   )
   if (rErr) throw rErr

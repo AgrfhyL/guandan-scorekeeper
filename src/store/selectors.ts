@@ -10,7 +10,7 @@ import type { RoundForStats } from '@/rules-engine/aggregates'
 import { SEAT_TEAMS, type MatchState, type RoundState } from './types'
 
 export function computeRoundState(round: RoundState): RoundComputed {
-  return computeRound(SEAT_TEAMS, round.firstDealer, round.hands)
+  return computeRound(SEAT_TEAMS, round.firstDealer ?? 'blue', round.hands)
 }
 
 /** A round counts as complete for stats only if it actually reached a 过A win. */
@@ -32,7 +32,21 @@ function toRoundForStats(round: RoundState): RoundForStats {
 }
 
 export function matchPlayerStats(match: MatchState): PlayerStats[] {
-  return playerStats(match.rounds.map(toRoundForStats))
+  const stats = playerStats(match.rounds.map(toRoundForStats))
+  const byId = new Map(stats.map((s) => [s.playerId, s]))
+  // Show EVERY player in the roster, even those no longer seated (spec §9). Missing → zeros.
+  return match.players.map(
+    (p) =>
+      byId.get(p.id) ?? {
+        playerId: p.id,
+        totalScore: 0,
+        roundsPlayed: 0,
+        roundsWon: 0,
+        headCount: 0,
+        avgScore: 0,
+        winRate: 0,
+      },
+  )
 }
 
 export function matchOverview(match: MatchState) {

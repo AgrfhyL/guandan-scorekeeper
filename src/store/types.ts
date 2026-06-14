@@ -7,7 +7,8 @@ export interface Player {
 
 export interface RoundState {
   id: string
-  firstDealer: Team
+  /** null until the recorder picks 蓝先/红先 for the round (spec §7). */
+  firstDealer: Team | null
   /** playerId in each seat (0&2 = blue, 1&3 = red). */
   seats: [string, string, string, string]
   hands: HandInput[]

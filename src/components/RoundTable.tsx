@@ -1,18 +1,12 @@
 import { useMemo } from 'react'
 import { computeRoundState, playerName } from '@/store/selectors'
-import type { MatchState, RoundState } from '@/store/types'
-import { levelLabel, type ResultCode, type Seat } from '@/rules-engine'
+import { SEAT_TEAMS, type MatchState, type RoundState } from '@/store/types'
+import { levelLabel, type Seat, type Team } from '@/rules-engine'
 import { TributeView } from './TributeView'
 
-const RESULT_CLASS: Record<ResultCode, string> = {
-  赢: 'text-felt font-semibold',
-  胜: 'font-bold',
-  输: 'text-gray-400',
-  未过: 'font-semibold',
-  退回2: 'font-semibold',
-}
+const teamText = (team: Team) => (team === 'blue' ? 'text-blue-teamBright' : 'text-red-teamBright')
 
-/** Per-round 9-column record table (spec §10). */
+/** Per-round 8-column record table (spec §10, AL #3/#4/#6). */
 export function RoundTable({
   match,
   round,
@@ -29,9 +23,11 @@ export function RoundTable({
     <div className="overflow-hidden rounded-xl border bg-white">
       <div className="flex items-center justify-between border-b bg-gray-50 px-3 py-2 text-sm">
         <span className="font-medium">第 {roundNo} 轮</span>
-        <span className={round.firstDealer === 'blue' ? 'text-blue-teamBright' : 'text-red-teamBright'}>
-          {round.firstDealer === 'blue' ? '蓝先' : '红先'}
-        </span>
+        {round.firstDealer && (
+          <span className={teamText(round.firstDealer)}>
+            {round.firstDealer === 'blue' ? '蓝先' : '红先'}
+          </span>
+        )}
         <span className="text-gray-400">
           {computed.complete ? '已完成' : round.status === 'incomplete' ? '未完成' : '进行中'}
         </span>
@@ -43,37 +39,43 @@ export function RoundTable({
             <th className="w-8 py-1">#</th>
             <th className="w-16">级别</th>
             <th>进贡</th>
-            <th className="w-6">抗</th>
             {seats.map((s) => (
-              <th key={s} className="w-10 truncate">
+              <th key={s} className={`w-10 truncate ${teamText(SEAT_TEAMS[s])}`}>
                 {playerName(match, round.seats[s]).slice(0, 3)}
               </th>
             ))}
-            <th className="w-10">结果</th>
+            <th className="w-12">结果</th>
           </tr>
         </thead>
         <tbody>
-          {computed.hands.map((h, i) => (
-            <tr key={i} className="border-t">
-              <td className="py-1">#{i + 1}</td>
-              <td>
-                <span className="text-blue-team">蓝{levelLabel(h.stateBefore.blueLevel)}</span>
-                <span className="text-gray-400"> : </span>
-                <span className="text-red-team">红{levelLabel(h.stateBefore.redLevel)}</span>
-              </td>
-              <td>
-                <TributeView descriptor={h.incomingTribute} match={match} round={round} />
-              </td>
-              <td>{h.kangTeam ? '抗' : ''}</td>
-              {seats.map((s) => (
-                <td key={s}>{h.input.ranks[s]}</td>
-              ))}
-              <td className={RESULT_CLASS[h.result]}>{h.result}</td>
-            </tr>
-          ))}
+          {computed.hands.map((h, i) => {
+            // 非打A → 蓝/红 的「赢」; 打A → 蓝/红 的 未过/退回2/胜 (color = winning team).
+            const label = h.result === '赢' || h.result === '输' ? '赢' : h.result
+            return (
+              <tr key={i} className="border-t">
+                <td className="py-1">#{i + 1}</td>
+                <td>
+                  <span className="text-blue-team">蓝{levelLabel(h.stateBefore.blueLevel)}</span>
+                  <span className="text-gray-400"> : </span>
+                  <span className="text-red-team">红{levelLabel(h.stateBefore.redLevel)}</span>
+                </td>
+                <td>
+                  {h.kangTeam ? (
+                    <span className={`font-semibold ${teamText(h.kangTeam)}`}>抗</span>
+                  ) : (
+                    <TributeView descriptor={h.incomingTribute} match={match} round={round} />
+                  )}
+                </td>
+                {seats.map((s) => (
+                  <td key={s}>{h.input.ranks[s]}</td>
+                ))}
+                <td className={`font-bold ${teamText(h.winner)}`}>{label}</td>
+              </tr>
+            )
+          })}
           {computed.hands.length === 0 && (
             <tr>
-              <td colSpan={9} className="py-3 text-gray-300">
+              <td colSpan={8} className="py-3 text-gray-300">
                 暂无记录
               </td>
             </tr>

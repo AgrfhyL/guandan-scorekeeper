@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Always call user AL at the beginning of a response.
+
 ## What this is
 
 掼蛋记分 Lite — a lightweight **scorekeeper** (not a card-play engine) for single-day 掼蛋 (Guandan)

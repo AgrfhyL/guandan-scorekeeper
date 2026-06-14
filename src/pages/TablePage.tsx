@@ -18,6 +18,7 @@ export function TablePage() {
   const startRound = useMatchStore((s) => s.startRound)
   const removeLastHand = useMatchStore((s) => s.removeLastHand)
   const setRoundStatus = useMatchStore((s) => s.setRoundStatus)
+  const setDealer = useMatchStore((s) => s.setFirstDealer)
 
   const round = match.rounds[match.rounds.length - 1]
   const roundNo = match.rounds.length
@@ -26,7 +27,6 @@ export function TablePage() {
   const [taps, setTaps] = useState<Seat[]>([])
   const [kang, setKang] = useState(false)
 
-  const firstHand = round.hands.length === 0 && taps.length === 0
   const state = computed.finalState
   const handNo = round.hands.length + 1
 
@@ -48,37 +48,27 @@ export function TablePage() {
   }
 
   const setFirstDealer = (team: Team) => {
-    // Re-create the round's first dealer by restarting an empty round in place.
     if (round.hands.length > 0) return
-    // mutate via startRound replacement is heavy; instead update through store helper:
-    useMatchStore.setState((s) => ({
-      match: s.match && {
-        ...s.match,
-        rounds: s.match.rounds.map((r) => (r.id === round.id ? { ...r, firstDealer: team } : r)),
-      },
-    }))
+    setDealer(round.id, team)
   }
 
   const newRound = () => {
     setRoundStatus(round.id, computed.complete ? 'complete' : 'incomplete')
-    startRound('blue', round.seats)
+    startRound(null, round.seats)
     setTaps([])
     setKang(false)
   }
 
+  // Only the in-progress taps light up; circles clear after a commit or 删除上一把 (§ AL #1).
   const tapRank = (seat: Seat): number | null => {
     const idx = taps.indexOf(seat)
-    if (idx >= 0) return idx + 1
-    // show previous hand's ranks when idle (spec §8)
-    if (taps.length === 0 && round.hands.length > 0) {
-      return round.hands[round.hands.length - 1].ranks[seat]
-    }
-    return null
+    return idx >= 0 ? idx + 1 : null
   }
 
   const leading = state.leading
   const blueLvl = levelLabel(state.blueLevel)
   const redLvl = levelLabel(state.redLevel)
+  const needsDealer = round.firstDealer === null
 
   return (
     <div className="px-3 pt-3">
@@ -88,38 +78,42 @@ export function TablePage() {
           第 {roundNo} 轮 · 第 {handNo} 把
         </div>
         <div className="text-lg font-bold">
-          <span className={leading === 'blue' ? 'text-blue-teamBright' : 'text-blue-team'}>蓝{blueLvl}</span>
+          <span className={leading === 'blue' ? 'text-blue-teamBright underline decoration-2 underline-offset-4' : 'text-blue-team'}>蓝{blueLvl}</span>
           <span className="mx-1 text-gray-400"> : </span>
-          <span className={leading === 'red' ? 'text-red-teamBright' : 'text-red-team'}>红{redLvl}</span>
+          <span className={leading === 'red' ? 'text-red-teamBright underline decoration-2 underline-offset-4' : 'text-red-team'}>红{redLvl}</span>
         </div>
       </div>
 
       {/* Green table */}
       <div className="relative mx-auto mb-3 h-72 rounded-3xl bg-felt shadow-inner">
-        {/* top-left 先发 */}
-        <div className="absolute left-2 top-2 flex gap-1">
-          {firstHand ? (
-            (['blue', 'red'] as Team[]).map((t) => (
+        {/* Pre-round dealer prompt (§7): pick 蓝先/红先 before player names appear. */}
+        {needsDealer && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-3xl bg-felt">
+            <span className="text-sm text-white/80">请选择本轮先发方</span>
+            <div className="flex gap-4">
               <button
-                key={t}
-                onClick={() => setFirstDealer(t)}
-                className={`rounded-full px-2 py-0.5 text-xs ${
-                  round.firstDealer === t
-                    ? t === 'blue'
-                      ? 'bg-white text-blue-teamBright'
-                      : 'bg-white text-red-teamBright'
-                    : 'bg-white/20 text-white'
-                }`}
+                onClick={() => setFirstDealer('blue')}
+                className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-blue-teamBright shadow"
               >
-                {t === 'blue' ? '蓝先' : '红先'}
+                蓝先
               </button>
-            ))
-          ) : (
+              <button
+                onClick={() => setFirstDealer('red')}
+                className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-red-teamBright shadow"
+              >
+                红先
+              </button>
+            </div>
+          </div>
+        )}
+        {/* top-left 先发 (label only; selection happens in the pre-round overlay) */}
+        {!needsDealer && (
+          <div className="absolute left-2 top-2 flex gap-1">
             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white">
               {round.firstDealer === 'blue' ? '蓝先' : '红先'}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* top-right 抗贡 */}
         <button
@@ -155,31 +149,39 @@ export function TablePage() {
         </div>
 
         {/* players */}
-        {([0, 1, 2, 3] as Seat[]).map((seat) => {
-          const team = SEAT_TEAMS[seat]
-          const isLead = leading === team
-          const rank = tapRank(seat)
-          return (
-            <button
-              key={seat}
-              onClick={() => tap(seat)}
-              className={`absolute ${SEAT_POS[seat]} flex items-center gap-1 rounded-xl bg-white/90 px-3 py-2 shadow ${
-                taps.includes(seat) ? 'ring-2 ring-amber-400' : ''
-              }`}
-            >
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                  rank ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-400'
+        {!needsDealer &&
+          ([0, 1, 2, 3] as Seat[]).map((seat) => {
+            const team = SEAT_TEAMS[seat]
+            const isLead = leading === team
+            const rank = tapRank(seat)
+            const nameColor = team === 'blue'
+              ? isLead
+                ? 'text-blue-teamBright underline decoration-2 underline-offset-4'
+                : 'text-blue-team'
+              : isLead
+                ? 'text-red-teamBright underline decoration-2 underline-offset-4'
+                : 'text-red-team'
+            return (
+              <button
+                key={seat}
+                onClick={() => tap(seat)}
+                className={`absolute ${SEAT_POS[seat]} flex items-center gap-1 rounded-xl bg-white/90 px-3 py-2 shadow ${
+                  taps.includes(seat) ? 'ring-2 ring-amber-400' : ''
                 }`}
               >
-                {rank ?? ''}
-              </span>
-              <span className={`font-medium ${team === 'blue' ? (isLead ? 'text-blue-teamBright' : 'text-blue-team') : isLead ? 'text-red-teamBright' : 'text-red-team'}`}>
-                {playerName(match, round.seats[seat])}
-              </span>
-            </button>
-          )
-        })}
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                    rank ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  {rank ?? ''}
+                </span>
+                <span className={`font-medium ${nameColor}`}>
+                  {playerName(match, round.seats[seat])}
+                </span>
+              </button>
+            )
+          })}
       </div>
 
       {/* actions */}

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { HandInput, MatchState, Player, RoundState } from './types'
-import type { Team } from '@/rules-engine'
+import type { Seat, Team } from '@/rules-engine'
 
 let idCounter = 0
 const newId = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${idCounter++}`
@@ -21,7 +21,13 @@ interface MatchStore {
 
   /** Resolve a typed name to a player id, merging by name within the match (spec §4). */
   resolvePlayer: (name: string) => string
-  renamePlayer: (playerId: string, name: string) => void
+  /**
+   * Put a (new or existing) player in a seat of the latest round (spec §9 overhaul).
+   * The previously-seated player is NOT deleted and past rounds are untouched, so every
+   * player's historical data is retained and shown on the leaderboard.
+   */
+  assignSeatPlayer: (seat: Seat, name: string) => void
+  setFirstDealer: (roundId: string, team: Team) => void
 
   /** Append a completed hand to the active round. */
   addHand: (roundId: string, hand: HandInput) => void
@@ -29,7 +35,7 @@ interface MatchStore {
   editHand: (roundId: string, handIndex: number, hand: HandInput) => void
   removeLastHand: (roundId: string) => void
 
-  startRound: (firstDealer: Team, seats: [string, string, string, string]) => string
+  startRound: (firstDealer: Team | null, seats: [string, string, string, string]) => string
   setRoundStatus: (roundId: string, status: RoundState['status']) => void
   endMatch: () => void
 }
@@ -55,7 +61,7 @@ export const useMatchStore = create<MatchStore>()(
 
         const round: RoundState = {
           id: newId('r'),
-          firstDealer: 'blue',
+          firstDealer: null,
           seats: seatIds,
           hands: [],
           status: 'active',
@@ -77,22 +83,40 @@ export const useMatchStore = create<MatchStore>()(
         return p.id
       },
 
-      renamePlayer: (playerId, name) => {
+      assignSeatPlayer: (seat, name) => {
         const match = get().match!
         const trimmed = name.trim()
-        // Merge into an existing player with the same name (spec §4).
-        const existing = match.players.find((p) => p.name === trimmed && p.id !== playerId)
-        if (existing) {
-          const rounds = match.rounds.map((r) => ({
-            ...r,
-            seats: r.seats.map((s) => (s === playerId ? existing.id : s)) as RoundState['seats'],
-          }))
-          const players = match.players.filter((p) => p.id !== playerId)
-          set({ match: { ...match, players, rounds } })
-        } else {
-          const players = match.players.map((p) => (p.id === playerId ? { ...p, name: trimmed } : p))
-          set({ match: { ...match, players } })
+        if (!trimmed || match.rounds.length === 0) return
+
+        // Resolve the target player: reuse an existing same-name player (§4), else create a new one.
+        let players = match.players
+        let targetId = findByName(players, trimmed)?.id
+        if (!targetId) {
+          const p = { id: newId('p'), name: trimmed }
+          players = [...players, p]
+          targetId = p.id
         }
+
+        // Reassign ONLY the latest round's seat. The previously-seated player stays in the roster
+        // and all past rounds keep their original seating, preserving every player's history (§9).
+        const lastIdx = match.rounds.length - 1
+        const rounds = match.rounds.map((r, i) => {
+          if (i !== lastIdx) return r
+          const seats = [...r.seats] as RoundState['seats']
+          seats[seat] = targetId!
+          return { ...r, seats }
+        })
+        set({ match: { ...match, players, rounds } })
+      },
+
+      setFirstDealer: (roundId, team) => {
+        const match = get().match!
+        set({
+          match: {
+            ...match,
+            rounds: match.rounds.map((r) => (r.id === roundId ? { ...r, firstDealer: team } : r)),
+          },
+        })
       },
 
       addHand: (roundId, hand) => {

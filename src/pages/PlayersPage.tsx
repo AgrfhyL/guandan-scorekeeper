@@ -7,17 +7,17 @@ import type { Seat } from '@/rules-engine'
 /** Seat setup + rename for the current (active) round (spec §8 玩家改名, §11 新开一轮). */
 export function PlayersPage() {
   const match = useMatchStore((s) => s.match)!
-  const renamePlayer = useMatchStore((s) => s.renamePlayer)
+  const assignSeatPlayer = useMatchStore((s) => s.assignSeatPlayer)
   const round = match.rounds[match.rounds.length - 1]
-  const [editing, setEditing] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Seat | null>(null)
   const [draft, setDraft] = useState('')
 
-  const startEdit = (playerId: string) => {
-    setEditing(playerId)
-    setDraft(playerName(match, playerId))
+  const startEdit = (seat: Seat) => {
+    setEditing(seat)
+    setDraft(playerName(match, round.seats[seat]))
   }
   const commit = () => {
-    if (editing && draft.trim()) renamePlayer(editing, draft)
+    if (editing !== null && draft.trim()) assignSeatPlayer(editing, draft)
     setEditing(null)
   }
 
@@ -35,7 +35,7 @@ export function PlayersPage() {
                 team === 'blue' ? 'bg-blue-teamSoft' : 'bg-red-teamSoft'
               }`}
             >
-              {editing === id ? (
+              {editing === seat ? (
                 <input
                   autoFocus
                   value={draft}
@@ -49,7 +49,7 @@ export function PlayersPage() {
                   <span className={team === 'blue' ? 'text-blue-teamBright' : 'text-red-teamBright'}>
                     {playerName(match, id)}
                   </span>
-                  <button onClick={() => startEdit(id)} aria-label="改名" className="text-gray-400">
+                  <button onClick={() => startEdit(seat)} aria-label="改名" className="text-gray-400">
                     ✎
                   </button>
                 </>
@@ -59,7 +59,7 @@ export function PlayersPage() {
         })}
       </div>
       <p className="mt-4 text-xs text-gray-400">
-        改名为已存在的名字会自动合并为同一玩家；改为新名字则视为新玩家。
+        改名只替换该座位的玩家：改为新名字会新增一名玩家，原玩家及其历史数据仍保留在榜单中；改为已存在的名字则复用该玩家。
       </p>
       <RoundList rounds={match.rounds} />
     </div>
