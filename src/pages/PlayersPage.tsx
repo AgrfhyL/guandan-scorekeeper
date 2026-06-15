@@ -6,25 +6,21 @@ import type { Seat } from '@/rules-engine'
 
 /** Inline autocomplete for seat assignment — filters existing players as you type. */
 function SeatEditor({
-  currentName,
   allNames,
   onCommit,
   onCancel,
 }: {
-  currentName: string
   allNames: string[]
   onCommit: (name: string) => void
   onCancel: () => void
 }) {
-  const [draft, setDraft] = useState(currentName)
+  const [draft, setDraft] = useState('')
   const [open, setOpen] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const suggestions = draft.trim()
-    ? allNames.filter(
-        (n) => n !== currentName && n.toLowerCase().includes(draft.trim().toLowerCase()),
-      )
-    : allNames.filter((n) => n !== currentName)
+    ? allNames.filter((n) => n.toLowerCase().includes(draft.trim().toLowerCase()))
+    : allNames
 
   const commit = (name: string) => {
     const trimmed = name.trim()
@@ -113,7 +109,6 @@ export function PlayersPage() {
             >
               {isEditing ? (
                 <SeatEditor
-                  currentName={playerName(match, id)}
                   allNames={allNames}
                   onCommit={(name) => commit(seat, name)}
                   onCancel={() => setEditing(null)}
