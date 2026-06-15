@@ -132,10 +132,10 @@ export function PlayersPage() {
         })}
       </div>
       {!readOnly && (
-        <p className="mt-4 text-xs text-gray-400">
-          新玩家加入：点击要替换的玩家后输入名字
-          老玩家加入：点击要替换的玩家后直接选择
-        </p>
+        <div className="mt-4 space-y-1 text-xs text-gray-400">
+          <p>输入名字创建新玩家</p>
+          <p>或选择现有玩家</p>
+        </div>
       )}
       <RoundList rounds={match.rounds} />
     </div>
