@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useMatchStore } from '@/store/matchStore'
 import { useMatchSync } from '@/sync/useMatchSync'
+import { ToastContainer } from '@/components/Toast'
 import { TablePage } from './TablePage'
 import { PlayersPage } from './PlayersPage'
 import { LeaderboardPage } from './LeaderboardPage'
@@ -29,10 +30,21 @@ function SaveDot({ status }: { status: SaveStatus }) {
 }
 
 export function MatchShell() {
+  const navigate = useNavigate()
   const match = useMatchStore((s) => s.match)
+  const lockedOut = useMatchStore((s) => s.lockedOut)
+  const toasts = useMatchStore((s) => s.toasts)
+  const removeToast = useMatchStore((s) => s.removeToast)
   const [tab, setTab] = useState<Tab>('table')
   // Password is stored in the match for autosave; spectators have no password.
   const { saveStatus } = useMatchSync(match?.password ?? null)
+
+  // Auto-downgrade to spectator if locked out by another editor.
+  useEffect(() => {
+    if (lockedOut && match) {
+      navigate(`/s/${match.code}`, { replace: true })
+    }
+  }, [lockedOut, match, navigate])
 
   if (!match) return <Navigate to="/" replace />
 
@@ -65,6 +77,8 @@ export function MatchShell() {
           </button>
         ))}
       </nav>
+
+      <ToastContainer messages={toasts} onDismiss={removeToast} />
     </div>
   )
 }
