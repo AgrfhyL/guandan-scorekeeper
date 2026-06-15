@@ -29,7 +29,6 @@ export function useSpectator(code: string) {
     }
     setRefreshing(true)
     const snapshot = await fetchMatchSnapshot(code)
-    setRefreshing(false)
     if (snapshot) {
       const serialized = JSON.stringify(snapshot)
       if (serialized !== lastRef.current) {
@@ -40,6 +39,7 @@ export function useSpectator(code: string) {
     } else {
       setStatus('notfound')
     }
+    setRefreshing(false)
   }
 
   useEffect(() => {
