@@ -123,6 +123,9 @@ create policy "editor can insert hands" on hands
 create policy "editor can update hands" on hands
   for update using (true);
 
+create policy "editor can insert matches" on matches
+  for insert with check (true);
+
 create policy "editor can update matches" on matches
   for update using (true);
 
