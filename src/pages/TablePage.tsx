@@ -192,7 +192,7 @@ export function TablePage() {
           </button>
         )}
         <button onClick={newRound} className="ml-auto rounded-lg bg-felt px-3 py-2 text-sm font-medium text-white">
-          {computed.complete ? '新开一轮' : '结束本轮并新开'}
+          {computed.complete ? '新开一轮' : '新开一轮'}
         </button>
       </div>
 

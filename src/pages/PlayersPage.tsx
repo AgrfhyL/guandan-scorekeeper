@@ -1,23 +1,94 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMatchStore } from '@/store/matchStore'
 import { playerName } from '@/store/selectors'
 import { SEAT_TEAMS, type RoundState } from '@/store/types'
 import type { Seat } from '@/rules-engine'
 
-/** Seat setup + rename for the current (active) round (spec §8 玩家改名, §11 新开一轮). */
+/** Inline autocomplete for seat assignment — filters existing players as you type. */
+function SeatEditor({
+  currentName,
+  allNames,
+  onCommit,
+  onCancel,
+}: {
+  currentName: string
+  allNames: string[]
+  onCommit: (name: string) => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState(currentName)
+  const [open, setOpen] = useState(true)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const suggestions = draft.trim()
+    ? allNames.filter(
+        (n) => n !== currentName && n.toLowerCase().includes(draft.trim().toLowerCase()),
+      )
+    : allNames.filter((n) => n !== currentName)
+
+  const commit = (name: string) => {
+    const trimmed = name.trim()
+    if (trimmed) onCommit(trimmed)
+    else onCancel()
+  }
+
+  return (
+    <div className="relative w-full">
+      <input
+        ref={inputRef}
+        autoFocus
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          setOpen(true)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit(draft)
+          if (e.key === 'Escape') onCancel()
+        }}
+        onBlur={() => {
+          // Delay so a suggestion tap registers before blur fires.
+          setTimeout(() => {
+            if (!inputRef.current?.closest('[data-seat-editor]')?.contains(document.activeElement)) {
+              commit(draft)
+            }
+          }, 150)
+        }}
+        className="w-full rounded border px-2 py-1 text-sm"
+        placeholder="输入或选择玩家"
+      />
+      {open && suggestions.length > 0 && (
+        <ul
+          data-seat-editor
+          className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border bg-white shadow-lg"
+        >
+          {suggestions.map((name) => (
+            <li key={name}>
+              <button
+                onMouseDown={(e) => e.preventDefault()} // keep focus on input
+                onClick={() => { setOpen(false); commit(name) }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+              >
+                {name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export function PlayersPage() {
   const match = useMatchStore((s) => s.match)!
   const assignSeatPlayer = useMatchStore((s) => s.assignSeatPlayer)
   const round = match.rounds[match.rounds.length - 1]
   const [editing, setEditing] = useState<Seat | null>(null)
-  const [draft, setDraft] = useState('')
 
-  const startEdit = (seat: Seat) => {
-    setEditing(seat)
-    setDraft(playerName(match, round.seats[seat]))
-  }
-  const commit = () => {
-    if (editing !== null && draft.trim()) assignSeatPlayer(editing, draft)
+  const allNames = match.players.map((p) => p.name)
+
+  const commit = (seat: Seat, name: string) => {
+    assignSeatPlayer(seat, name)
     setEditing(null)
   }
 
@@ -28,28 +99,28 @@ export function PlayersPage() {
         {([0, 1, 2, 3] as Seat[]).map((seat) => {
           const id = round.seats[seat]
           const team = SEAT_TEAMS[seat]
+          const isEditing = editing === seat
           return (
             <div
               key={seat}
+              data-seat-editor
               className={`flex items-center justify-between rounded-xl border px-3 py-3 ${
                 team === 'blue' ? 'bg-blue-teamSoft' : 'bg-red-teamSoft'
               }`}
             >
-              {editing === seat ? (
-                <input
-                  autoFocus
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onBlur={commit}
-                  onKeyDown={(e) => e.key === 'Enter' && commit()}
-                  className="w-full rounded border px-2 py-1"
+              {isEditing ? (
+                <SeatEditor
+                  currentName={playerName(match, id)}
+                  allNames={allNames}
+                  onCommit={(name) => commit(seat, name)}
+                  onCancel={() => setEditing(null)}
                 />
               ) : (
                 <>
                   <span className={team === 'blue' ? 'text-blue-teamBright' : 'text-red-teamBright'}>
                     {playerName(match, id)}
                   </span>
-                  <button onClick={() => startEdit(seat)} aria-label="改名" className="text-gray-400">
+                  <button onClick={() => setEditing(seat)} aria-label="改名" className="text-gray-400">
                     ✎
                   </button>
                 </>
@@ -59,7 +130,8 @@ export function PlayersPage() {
         })}
       </div>
       <p className="mt-4 text-xs text-gray-400">
-        改名只替换该座位的玩家：改为新名字会新增一名玩家，原玩家及其历史数据仍保留在榜单中；改为已存在的名字则复用该玩家。
+        新玩家加入：点击要替换的玩家后输入名字
+        老玩家加入：点击要替换的玩家后直接选择
       </p>
       <RoundList rounds={match.rounds} />
     </div>
