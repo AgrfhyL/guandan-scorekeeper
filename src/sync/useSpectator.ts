@@ -16,6 +16,7 @@ export function useSpectator(code: string) {
   const loadMatch = useMatchStore((s) => s.loadMatch)
   const match = useMatchStore((s) => s.match)
   const [status, setStatus] = useState<SpectatorStatus>('loading')
+  const [refreshing, setRefreshing] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Last serialized snapshot — skip loadMatch when nothing changed so the UI
   // (scroll position, selected tab) is never disrupted by a no-op poll (spec §16).
@@ -26,7 +27,9 @@ export function useSpectator(code: string) {
       setStatus('unconfigured')
       return
     }
+    setRefreshing(true)
     const snapshot = await fetchMatchSnapshot(code)
+    setRefreshing(false)
     if (snapshot) {
       const serialized = JSON.stringify(snapshot)
       if (serialized !== lastRef.current) {
@@ -53,7 +56,7 @@ export function useSpectator(code: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
-  return { match, status }
+  return { match, status, refreshing }
 }
 
 // ─── Load full match from Supabase ───────────────────────────────────────────

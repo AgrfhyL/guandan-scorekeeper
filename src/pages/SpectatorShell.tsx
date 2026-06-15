@@ -20,7 +20,7 @@ export function SpectatorShell() {
   const { code = '' } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('table')
-  const { match, status } = useSpectator(code.toUpperCase())
+  const { match, status, refreshing } = useSpectator(code.toUpperCase())
 
   if (status === 'loading') {
     return <CenterMsg text="正在载入比赛…" />
@@ -38,7 +38,10 @@ export function SpectatorShell() {
         {/* Top bar: match code + spectator badge */}
         <div className="flex items-center justify-between border-b bg-white px-4 py-2 text-xs text-gray-400 safe-top">
           <span>比赛码 <strong className="text-gray-700">{match.code}</strong></span>
-          <span className="text-amber-500">观赛模式</span>
+          <div className="flex items-center gap-2">
+            {refreshing && <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" title="更新中" />}
+            <span className="text-amber-500">观赛模式</span>
+          </div>
         </div>
 
         <main className="flex-1 pb-20">
