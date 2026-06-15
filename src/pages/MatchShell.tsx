@@ -32,7 +32,7 @@ export function MatchShell() {
   const match = useMatchStore((s) => s.match)
   const [tab, setTab] = useState<Tab>('table')
   // Password is stored in the match for autosave; spectators have no password.
-  const { saveStatus, isEditor } = useMatchSync(match?.password ?? null)
+  const { saveStatus } = useMatchSync(match?.password ?? null)
 
   if (!match) return <Navigate to="/" replace />
 
@@ -42,7 +42,7 @@ export function MatchShell() {
       <div className="flex items-center justify-between border-b bg-white px-4 py-2 text-xs text-gray-400 safe-top">
         <span>比赛码 <strong className="text-gray-700">{match.code}</strong></span>
         <div className="flex items-center gap-2">
-          {!isEditor && <span className="text-amber-500">观赛模式</span>}
+          <span className="text-felt">记录模式</span>
           <SaveDot status={saveStatus} />
         </div>
       </div>

@@ -21,11 +21,12 @@ export function Home() {
   const [names, setNames] = useState<[string, string, string, string]>(['', '', '', ''])
   const [showHelp, setShowHelp] = useState(false)
 
-  const canCreate =
-    code.trim().length === 4 && password.trim().length === 4 && names.every((n) => n.trim())
+  const canCreate = code.trim().length === 4 && password.trim().length === 4
 
   const handleCreate = () => {
-    createMatch({ code: code.trim().toUpperCase(), password: password.trim(), date, location, playerNames: names })
+    // Empty names default to 玩家1–4 (client request).
+    const playerNames = names.map((n, i) => n.trim() || `玩家${i + 1}`) as [string, string, string, string]
+    createMatch({ code: code.trim().toUpperCase(), password: password.trim(), date, location, playerNames })
     navigate('/m/table')
   }
 
@@ -62,33 +63,44 @@ export function Home() {
 
         <label className="mb-2 block text-sm text-gray-600">密码（4 位，必填）</label>
         <input
+          type="password"
+          inputMode="text"
+          autoComplete="new-password"
           value={password}
           maxLength={4}
           onChange={(e) => setPassword(e.target.value)}
           className="mb-3 w-full rounded-lg border px-3 py-2 tracking-widest"
         />
 
-        <div className="mb-3 flex gap-2">
-          <div className="flex-1">
+        <div className="mb-3 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:gap-2">
+          <div className="min-w-0 min-[380px]:flex-1">
             <label className="mb-2 block text-sm text-gray-600">日期</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2"
+              className="w-full min-w-0 rounded-lg border px-3 py-2"
             />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 min-[380px]:flex-1">
             <label className="mb-2 block text-sm text-gray-600">地点（可空）</label>
             <input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2"
+              className="w-full min-w-0 rounded-lg border px-3 py-2"
             />
           </div>
         </div>
 
-        <label className="mb-2 block text-sm text-gray-600">当前桌 4 位玩家</label>
+        <label className="mb-2 block text-sm text-gray-600">当前桌 4 位玩家（可空，默认玩家1–4）</label>
+        <div className="mb-1 grid grid-cols-2 gap-2">
+          <div className="rounded-md bg-blue-teamSoft py-1 text-center text-xs font-semibold text-blue-teamBright">
+            蓝队
+          </div>
+          <div className="rounded-md bg-red-teamSoft py-1 text-center text-xs font-semibold text-red-teamBright">
+            红队
+          </div>
+        </div>
         <div className="mb-4 grid grid-cols-2 gap-2">
           {names.map((n, i) => (
             <input
@@ -100,7 +112,11 @@ export function Home() {
                 next[i] = e.target.value
                 setNames(next)
               }}
-              className={`rounded-lg border px-3 py-2 ${i % 2 === 0 ? 'text-blue-teamBright' : 'text-red-teamBright'}`}
+              className={`rounded-lg border px-3 py-2 ${
+                i % 2 === 0
+                  ? 'text-blue-teamBright placeholder:text-blue-team/50'
+                  : 'text-red-teamBright placeholder:text-red-team/50'
+              }`}
             />
           ))}
         </div>
@@ -121,8 +137,7 @@ export function Home() {
         <div className="mt-2 rounded-xl bg-white p-4 text-sm text-gray-600 shadow-sm">
           <p>1. 填写比赛码、密码与 4 位玩家，点击开始。</p>
           <p>2. 每一把按出完牌顺序点击玩家，自动记录名次。</p>
-          <p>3. 一轮打完后可新开一轮，默认沿用座次。</p>
-          <p>4. 榜单页查看个人积分与今日总览，可导出长图。</p>
+          <p>3. 榜单页查看个人积分与今日总览，可导出长图。</p>
         </div>
       )}
     </div>
