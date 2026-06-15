@@ -35,16 +35,33 @@ export function useMatchSync(password: string | null): UseSyncResult {
   // ── Acquire lock on mount ─────────────────────────────────────────────────
   useEffect(() => {
     if (!supabase || !match || !password) return
-    callLock({ action: 'acquire', code: match.code, password })
-      .then((res) => {
-        if (res.locked) {
-          setIsEditor(false)
-        } else if (res.token) {
-          tokenRef.current = res.token
-          setIsEditor(true)
-        }
-      })
-      .catch(() => setIsEditor(false))
+
+    // Seed the match row first so the lock Edge Function can find it.
+    // The lock function does SELECT by code — if the row doesn't exist yet it returns
+    // 404 and we'd never become editor. Upsert is safe to call with anon key (INSERT
+    // policy applied). We don't need to be editor yet for this write.
+    async function acquireWithSeed() {
+      const pwhash = await sha256(password!)
+      await supabase!.from('matches').upsert(
+        {
+          code: match!.code,
+          password_hash: pwhash,
+          date: match!.date,
+          location: match!.location,
+          status: match!.status,
+        },
+        { onConflict: 'code' },
+      )
+      const res = await callLock({ action: 'acquire', code: match!.code, password: password! })
+      if (res.locked) {
+        setIsEditor(false)
+      } else if (res.token) {
+        tokenRef.current = res.token
+        setIsEditor(true)
+      }
+    }
+
+    acquireWithSeed().catch(() => setIsEditor(false))
 
     return () => {
       if (tokenRef.current && match) {
