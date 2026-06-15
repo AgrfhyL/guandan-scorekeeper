@@ -2,15 +2,12 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { HandInput, MatchState, Player, RoundState } from './types'
 import type { Seat, Team } from '@/rules-engine'
-import type { ToastMessage } from '@/components/Toast'
 
 let idCounter = 0
 const newId = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${idCounter++}`
 
 interface MatchStore {
   match: MatchState | null
-  lockedOut: boolean
-  toasts: ToastMessage[]
 
   createMatch: (init: {
     code: string
@@ -41,10 +38,6 @@ interface MatchStore {
   startRound: (firstDealer: Team | null, seats: [string, string, string, string]) => string
   setRoundStatus: (roundId: string, status: RoundState['status']) => void
   endMatch: () => void
-
-  setLockedOut: (locked: boolean) => void
-  addToast: (text: string, type?: 'info' | 'error' | 'warning') => void
-  removeToast: (id: string) => void
 }
 
 function findByName(players: Player[], name: string): Player | undefined {
@@ -55,8 +48,6 @@ export const useMatchStore = create<MatchStore>()(
   persist(
     (set, get) => ({
       match: null,
-      lockedOut: false,
-      toasts: [],
 
       createMatch: ({ code, password, date, location, playerNames }) => {
         const players: Player[] = []
@@ -186,18 +177,6 @@ export const useMatchStore = create<MatchStore>()(
       endMatch: () => {
         const match = get().match!
         set({ match: { ...match, status: 'ended' } })
-      },
-
-      setLockedOut: (locked) => set({ lockedOut: locked }),
-
-      addToast: (text, type = 'info') => {
-        const id = `toast_${Date.now()}_${Math.random()}`
-        const newToast: ToastMessage = { id, text, type }
-        set((s) => ({ toasts: [...s.toasts, newToast] }))
-      },
-
-      removeToast: (id) => {
-        set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
       },
     }),
     { name: 'guandan-match' },

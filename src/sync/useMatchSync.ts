@@ -55,11 +55,6 @@ export function useMatchSync(password: string | null): UseSyncResult {
       const res = await callLock({ action: 'acquire', code: match!.code, password: password! })
       if (res.locked) {
         setIsEditor(false)
-        // Auto-downgrade to spectator with toast.
-        const addToast = useMatchStore.getState().addToast
-        const setLockedOut = useMatchStore.getState().setLockedOut
-        setLockedOut(true)
-        addToast('已有记录人正在编辑，本机记录无效', 'warning')
       } else if (res.token) {
         tokenRef.current = res.token
         setIsEditor(true)
