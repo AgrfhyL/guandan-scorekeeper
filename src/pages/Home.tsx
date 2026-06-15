@@ -73,27 +73,25 @@ export function Home() {
           className="mb-3 w-full rounded-lg border px-3 py-2 tracking-widest"
         />
 
-        <div className="mb-3 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:gap-2">
-          <div className="min-w-0 min-[380px]:flex-1">
-            <label className="mb-2 block text-sm text-gray-600">日期</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full min-w-0 rounded-lg border px-3 py-2"
-            />
-          </div>
-          <div className="min-w-0 min-[380px]:flex-1">
-            <label className="mb-2 block text-sm text-gray-600">地点（可空）</label>
-            <input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full min-w-0 rounded-lg border px-3 py-2"
-            />
-          </div>
+        <div className="mb-3">
+          <label className="mb-2 block text-sm text-gray-600">地点（可空）</label>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="w-full rounded-lg border px-3 py-2"
+          />
+        </div>
+        <div className="mb-3">
+          <label className="mb-2 block text-sm text-gray-600">日期</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-lg border px-3 py-2"
+          />
         </div>
 
-        <label className="mb-2 block text-sm text-gray-600">当前桌 4 位玩家（可空，默认玩家1–4）</label>
+        <label className="mb-2 block text-sm text-gray-600">当前桌 4 位玩家（可空：空出时玩家为默认名字）</label>
         <div className="mb-1 grid grid-cols-2 gap-2">
           <div className="rounded-md bg-blue-teamSoft py-1 text-center text-xs font-semibold text-blue-teamBright">
             蓝队

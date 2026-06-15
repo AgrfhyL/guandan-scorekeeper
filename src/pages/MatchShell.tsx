@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useMatchStore } from '@/store/matchStore'
 import { useMatchSync } from '@/sync/useMatchSync'
 import { TablePage } from './TablePage'
@@ -29,6 +29,7 @@ function SaveDot({ status }: { status: SaveStatus }) {
 }
 
 export function MatchShell() {
+  const navigate = useNavigate()
   const match = useMatchStore((s) => s.match)
   const [tab, setTab] = useState<Tab>('table')
   // Password is stored in the match for autosave; spectators have no password.
@@ -38,9 +39,14 @@ export function MatchShell() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
-      {/* Top bar: match code + save indicator */}
+      {/* Top bar: match code + save indicator + home button */}
       <div className="flex items-center justify-between border-b bg-white px-4 py-2 text-xs text-gray-400 safe-top">
-        <span>比赛码 <strong className="text-gray-700">{match.code}</strong></span>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/')} className="text-gray-400 hover:text-gray-600">
+            ← 首页
+          </button>
+          <span>比赛码 <strong className="text-gray-700">{match.code}</strong></span>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-felt">记录模式</span>
           <SaveDot status={saveStatus} />
