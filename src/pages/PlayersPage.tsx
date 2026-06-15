@@ -85,7 +85,10 @@ export function PlayersPage() {
   const round = match.rounds[match.rounds.length - 1]
   const [editing, setEditing] = useState<Seat | null>(null)
 
-  const allNames = match.players.map((p) => p.name)
+  const seatedIds = new Set(round.seats)
+  const allNames = match.players
+    .filter((p) => !seatedIds.has(p.id))
+    .map((p) => p.name)
 
   const commit = (seat: Seat, name: string) => {
     assignSeatPlayer(seat, name)
