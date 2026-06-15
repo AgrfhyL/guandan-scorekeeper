@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMatchStore } from '@/store/matchStore'
 import { matchOverview, matchPlayerStats, playerName } from '@/store/selectors'
 import { RoundTable } from '@/components/RoundTable'
+import { useReadOnly } from '@/components/ReadOnly'
 import type { PlayerStats } from '@/rules-engine'
 
 type SortKey = keyof Pick<
@@ -30,6 +31,7 @@ export function LeaderboardPage() {
   const stats = useMemo(() => matchPlayerStats(match), [match])
   const overview = useMemo(() => matchOverview(match), [match])
   const [tab, setTab] = useState<SortKey>('totalScore')
+  const readOnly = useReadOnly()
 
   const sorted = useMemo(
     () => [...stats].sort((a, b) => (b[tab] as number) - (a[tab] as number) || b.totalScore - a.totalScore),
@@ -78,7 +80,7 @@ export function LeaderboardPage() {
         ))}
       </div>
 
-      {match.status === 'active' && (
+      {match.status === 'active' && !readOnly && (
         <button
           onClick={() => {
             if (confirm('确认结束本次活动？结束后将锁定为只读。')) endMatch()

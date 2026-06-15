@@ -3,6 +3,7 @@ import { useMatchStore } from '@/store/matchStore'
 import { playerName } from '@/store/selectors'
 import { SEAT_TEAMS, type RoundState } from '@/store/types'
 import type { Seat } from '@/rules-engine'
+import { useReadOnly } from '@/components/ReadOnly'
 
 /** Inline autocomplete for seat assignment — filters existing players as you type. */
 function SeatEditor({
@@ -80,6 +81,7 @@ export function PlayersPage() {
   const assignSeatPlayer = useMatchStore((s) => s.assignSeatPlayer)
   const round = match.rounds[match.rounds.length - 1]
   const [editing, setEditing] = useState<Seat | null>(null)
+  const readOnly = useReadOnly()
 
   const seatedIds = new Set(round.seats)
   const allNames = match.players
@@ -107,7 +109,7 @@ export function PlayersPage() {
                 team === 'blue' ? 'bg-blue-teamSoft' : 'bg-red-teamSoft'
               }`}
             >
-              {isEditing ? (
+              {isEditing && !readOnly ? (
                 <SeatEditor
                   allNames={allNames}
                   onCommit={(name) => commit(seat, name)}
@@ -118,19 +120,23 @@ export function PlayersPage() {
                   <span className={team === 'blue' ? 'text-blue-teamBright' : 'text-red-teamBright'}>
                     {playerName(match, id)}
                   </span>
-                  <button onClick={() => setEditing(seat)} aria-label="改名" className="text-gray-400">
-                    ✎
-                  </button>
+                  {!readOnly && (
+                    <button onClick={() => setEditing(seat)} aria-label="改名" className="text-gray-400">
+                      ✎
+                    </button>
+                  )}
                 </>
               )}
             </div>
           )
         })}
       </div>
-      <p className="mt-4 text-xs text-gray-400">
-        新玩家加入：点击要替换的玩家后输入名字
-        老玩家加入：点击要替换的玩家后直接选择
-      </p>
+      {!readOnly && (
+        <p className="mt-4 text-xs text-gray-400">
+          新玩家加入：点击要替换的玩家后输入名字
+          老玩家加入：点击要替换的玩家后直接选择
+        </p>
+      )}
       <RoundList rounds={match.rounds} />
     </div>
   )

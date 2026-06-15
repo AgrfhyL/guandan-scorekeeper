@@ -2,7 +2,7 @@
  * Spectator: poll the cloud for match state every 10s (spec §16).
  * Refreshes only the data region; does not affect scroll/expanded UI state.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { useMatchStore } from '@/store/matchStore'
 import type { MatchState, RoundState } from '@/store/types'
@@ -10,15 +10,33 @@ import type { Rank, Team } from '@/rules-engine'
 
 const POLL_MS = 10_000
 
+export type SpectatorStatus = 'loading' | 'ok' | 'notfound' | 'unconfigured'
+
 export function useSpectator(code: string) {
   const loadMatch = useMatchStore((s) => s.loadMatch)
   const match = useMatchStore((s) => s.match)
+  const [status, setStatus] = useState<SpectatorStatus>('loading')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Last serialized snapshot — skip loadMatch when nothing changed so the UI
+  // (scroll position, selected tab) is never disrupted by a no-op poll (spec §16).
+  const lastRef = useRef<string>('')
 
   const fetchAndLoad = async () => {
-    if (!supabase) return
+    if (!supabase) {
+      setStatus('unconfigured')
+      return
+    }
     const snapshot = await fetchMatchSnapshot(code)
-    if (snapshot) loadMatch(snapshot)
+    if (snapshot) {
+      const serialized = JSON.stringify(snapshot)
+      if (serialized !== lastRef.current) {
+        lastRef.current = serialized
+        loadMatch(snapshot)
+      }
+      setStatus('ok')
+    } else {
+      setStatus('notfound')
+    }
   }
 
   useEffect(() => {
@@ -35,7 +53,7 @@ export function useSpectator(code: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
-  return { match }
+  return { match, status }
 }
 
 // ─── Load full match from Supabase ───────────────────────────────────────────

@@ -4,6 +4,7 @@ import { computeRoundState, playerName } from '@/store/selectors'
 import { SEAT_TEAMS } from '@/store/types'
 import { levelLabel, type Rank, type Seat, type Team } from '@/rules-engine'
 import { RoundTable } from '@/components/RoundTable'
+import { useReadOnly } from '@/components/ReadOnly'
 
 const SEAT_POS: Record<Seat, string> = {
   0: 'top-2 left-1/2 -translate-x-1/2',
@@ -19,6 +20,7 @@ export function TablePage() {
   const removeLastHand = useMatchStore((s) => s.removeLastHand)
   const setRoundStatus = useMatchStore((s) => s.setRoundStatus)
   const setDealer = useMatchStore((s) => s.setFirstDealer)
+  const readOnly = useReadOnly()
 
   const round = match.rounds[match.rounds.length - 1]
   const roundNo = match.rounds.length
@@ -41,7 +43,7 @@ export function TablePage() {
   }
 
   const tap = (seat: Seat) => {
-    if (computed.complete || taps.includes(seat)) return
+    if (readOnly || computed.complete || taps.includes(seat)) return
     const next = [...taps, seat]
     setTaps(next)
     commitIfComplete(next, kang)
@@ -89,21 +91,27 @@ export function TablePage() {
         {/* Pre-round dealer prompt (§7): pick 蓝先/红先 before player names appear. */}
         {needsDealer && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-3xl bg-felt">
-            <span className="text-sm text-white/80">请选择本轮先发方</span>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setFirstDealer('blue')}
-                className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-blue-teamBright shadow"
-              >
-                蓝先
-              </button>
-              <button
-                onClick={() => setFirstDealer('red')}
-                className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-red-teamBright shadow"
-              >
-                红先
-              </button>
-            </div>
+            {readOnly ? (
+              <span className="text-sm text-white/80">等待记录人选择先发方…</span>
+            ) : (
+              <>
+                <span className="text-sm text-white/80">请选择本轮先发方</span>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setFirstDealer('blue')}
+                    className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-blue-teamBright shadow"
+                  >
+                    蓝先
+                  </button>
+                  <button
+                    onClick={() => setFirstDealer('red')}
+                    className="rounded-2xl bg-white px-6 py-4 text-lg font-bold text-red-teamBright shadow"
+                  >
+                    红先
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
         {/* top-left 先发 (label only; selection happens in the pre-round overlay) */}
@@ -116,37 +124,45 @@ export function TablePage() {
         )}
 
         {/* top-right 抗贡 */}
-        <button
-          onClick={() => setKang((v) => !v)}
-          className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs ${
-            kang ? 'bg-amber-300 text-amber-900' : 'bg-white/20 text-white'
-          }`}
-        >
-          抗
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setKang((v) => !v)}
+            className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs ${
+              kang ? 'bg-amber-300 text-amber-900' : 'bg-white/20 text-white'
+            }`}
+          >
+            抗
+          </button>
+        )}
 
         {/* center hint / undo */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-xs text-white/70">
-          {computed.complete ? '本轮已结束' : '按顺序点击玩家名\n以录入名次'.split('\n').map((l) => <div key={l}>{l}</div>)}
+          {computed.complete
+            ? '本轮已结束'
+            : readOnly
+              ? '观赛中 · 实时更新'
+              : '按顺序点击玩家名\n以录入名次'.split('\n').map((l) => <div key={l}>{l}</div>)}
         </div>
 
         {/* bottom-right undo/reset */}
-        <div className="absolute bottom-2 right-2 flex gap-1">
-          <button
-            onClick={() => setTaps((t) => t.slice(0, -1))}
-            className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white"
-            aria-label="撤销上一步"
-          >
-            ↶
-          </button>
-          <button
-            onClick={() => setTaps([])}
-            className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white"
-            aria-label="重置本把"
-          >
-            ⟲
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="absolute bottom-2 right-2 flex gap-1">
+            <button
+              onClick={() => setTaps((t) => t.slice(0, -1))}
+              className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white"
+              aria-label="撤销上一步"
+            >
+              ↶
+            </button>
+            <button
+              onClick={() => setTaps([])}
+              className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white"
+              aria-label="重置本把"
+            >
+              ⟲
+            </button>
+          </div>
+        )}
 
         {/* players */}
         {!needsDealer &&
@@ -185,16 +201,18 @@ export function TablePage() {
       </div>
 
       {/* actions */}
-      <div className="mb-4 flex gap-2">
-        {round.hands.length > 0 && !computed.complete && (
-          <button onClick={() => removeLastHand(round.id)} className="rounded-lg border px-3 py-2 text-sm">
-            删除上一把
+      {!readOnly && (
+        <div className="mb-4 flex gap-2">
+          {round.hands.length > 0 && !computed.complete && (
+            <button onClick={() => removeLastHand(round.id)} className="rounded-lg border px-3 py-2 text-sm">
+              删除上一把
+            </button>
+          )}
+          <button onClick={newRound} className="ml-auto rounded-lg bg-felt px-3 py-2 text-sm font-medium text-white">
+            新开一轮
           </button>
-        )}
-        <button onClick={newRound} className="ml-auto rounded-lg bg-felt px-3 py-2 text-sm font-medium text-white">
-          {computed.complete ? '新开一轮' : '新开一轮'}
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* current round record */}
       <RoundTable match={match} round={round} roundNo={roundNo} />

@@ -20,6 +20,7 @@ export function Home() {
   const [location, setLocation] = useState('')
   const [names, setNames] = useState<[string, string, string, string]>(['', '', '', ''])
   const [showHelp, setShowHelp] = useState(false)
+  const [spectateCode, setSpectateCode] = useState('')
 
   const canCreate = code.trim().length === 4 && password.trim().length === 4
 
@@ -128,6 +129,27 @@ export function Home() {
         >
           开始记分
         </button>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="mb-3 font-semibold">观赛</h2>
+        <label className="mb-2 block text-sm text-gray-600">输入比赛码即可实时观看</label>
+        <div className="flex gap-2">
+          <input
+            value={spectateCode}
+            maxLength={4}
+            placeholder="比赛码"
+            onChange={(e) => setSpectateCode(e.target.value.toUpperCase())}
+            className="flex-1 rounded-lg border px-3 py-2 uppercase tracking-widest"
+          />
+          <button
+            disabled={spectateCode.trim().length !== 4}
+            onClick={() => navigate(`/s/${spectateCode.trim().toUpperCase()}`)}
+            className="rounded-lg bg-felt px-4 text-sm font-medium text-white disabled:opacity-40"
+          >
+            观赛
+          </button>
+        </div>
       </div>
 
       <button onClick={() => setShowHelp((v) => !v)} className="mt-4 text-sm text-gray-500 underline">
